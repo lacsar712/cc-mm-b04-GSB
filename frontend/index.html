@@ -30,12 +30,20 @@
     </section>
     <section id="app" hidden>
       <p id="live">等待推送</p>
+      <section id="config">
+        <label>每测点每小时上报次数门槛：</label>
+        <input id="limit" type="number" min="1" max="99" style="width:5em" />
+        <button id="limit-btn" type="button">修改门槛</button>
+        <span id="limit-hint"></span>
+      </section>
       <form id="form">
         <input id="site" placeholder="测点" />
         <input id="ch4" type="number" step="0.01" placeholder="甲烷 %" />
         <button>上报</button>
       </form>
       <table><thead><tr><th>测点</th><th>甲烷 %</th><th>状态</th><th>说明</th></tr></thead><tbody id="rows"></tbody></table>
+      <h3>超次尝试册</h3>
+      <table><thead><tr><th>测点</th><th>操作者</th><th>时刻</th><th>当时门槛</th></tr></thead><tbody id="attempts"></tbody></table>
     </section>
   </main>
   <script src="/app.js"></script>

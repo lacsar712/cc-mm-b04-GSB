@@ -7,12 +7,29 @@ const appBox = document.querySelector("#app");
 const rows = document.querySelector("#rows");
 const live = document.querySelector("#live");
 const form = document.querySelector("#form");
+const attemptsBox = document.querySelector("#attempts");
+const limitInput = document.querySelector("#limit");
+const limitBtn = document.querySelector("#limit-btn");
+const limitHint = document.querySelector("#limit-hint");
 
 function paint(list) {
   rows.innerHTML = list
     .map(
       (r) =>
         `<tr><td>${r.site}</td><td>${r.ch4_pct}</td><td class="${r.level === "报警" ? "alarm" : "ok"}">${r.level}</td><td>${r.note}</td></tr>`,
+    )
+    .join("");
+}
+
+function fmtTime(iso) {
+  return new Date(iso).toLocaleString("zh-CN", { hour12: false });
+}
+
+function paintAttempts(list) {
+  attemptsBox.innerHTML = list
+    .map(
+      (a) =>
+        `<tr><td>${a.site}</td><td>${a.operator}</td><td>${fmtTime(a.attempted_at)}</td><td>${a.limit_in_effect}</td></tr>`,
     )
     .join("");
 }
@@ -37,12 +54,27 @@ function showApp() {
   document.querySelector("#who").textContent = role === "writer" ? "检查员" : "查看";
   document.querySelector("#out").hidden = false;
   form.hidden = role !== "writer";
+  // 旁观账号只能看门槛，不能改
+  limitInput.disabled = role !== "writer";
+  limitBtn.hidden = role !== "writer";
+  limitHint.textContent = role === "writer" ? "" : "（旁观账号只读）";
   connect();
   load();
+  loadConfig();
+  loadAttempts();
 }
 
 async function load() {
   paint(await api("/api/readings"));
+}
+
+async function loadAttempts() {
+  paintAttempts(await api("/api/over-limit-attempts"));
+}
+
+async function loadConfig() {
+  const cfg = await api("/api/config");
+  limitInput.value = cfg.hourly_per_site_limit;
 }
 
 function connect() {
@@ -54,6 +86,19 @@ function connect() {
     load();
   };
 }
+
+limitBtn.onclick = async () => {
+  try {
+    const cfg = await api("/api/config", {
+      method: "PUT",
+      body: JSON.stringify({ hourly_per_site_limit: Number(limitInput.value) }),
+    });
+    limitInput.value = cfg.hourly_per_site_limit;
+    limitHint.textContent = "门槛已更新，只影响之后的请求";
+  } catch (err) {
+    limitHint.textContent = err.message;
+  }
+};
 
 document.querySelector("#go").onclick = async () => {
   const data = await api("/api/auth/login", {
@@ -83,6 +128,7 @@ form.onsubmit = async (e) => {
   } catch (err) {
     live.textContent = err.message;
   }
+  loadAttempts();
 };
 
 document.querySelector("#out").onclick = () => {
